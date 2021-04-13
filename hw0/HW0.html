@@ -1,146 +1,150 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<style>
-#info {
-  position: absolute;
-  top: 0px;
-  width: 100%;
-  padding: 10px;
-  text-align: center;
-  color: #00ffff
-}
-body {
-  overflow: hidden;
-}
-</style>
+    <style>
+        #info {
+            position: absolute;
+            top: 0px;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            color: #00ffff
+        }
+        
+        body {
+            overflow: hidden;
+        }
+    </style>
 </head>
 <script src="https://threejs.org/build/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
 <body>
-<div id="info">HW0.js
-<br>
-<button id="trainturn" onclick="ButtonEvent()">Press To Stop</button>
-<br>
-<p id="turn">shift left</p>
-<p id="angle"></p>
-<script>
-//<p id="angle"></p>
-var camera,scene,renderer,clock,train;
-var angle = 0;
-var stop = 0;
-//mode 0 = shift left, 1 = left half circle, 2 = shift right, 3 = right half circle, 4 = Stop
-var mode = 0;
-var line = 0;
-var saved_mode = 0;
-init();
-animate();
-function init() {
-  scene = new THREE.Scene();
-  clock = new THREE.Clock(); 
-  renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x888888);
-  document.body.appendChild(renderer.domElement);
-  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
-  camera.position.set (0, 40, 50);
-  let controls = new THREE.OrbitControls(camera, renderer.domElement);
-  var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
-  scene.add(gridXZ);
-  train = new THREE.Mesh(new THREE.BoxGeometry (10,10,30), new THREE.MeshNormalMaterial());
-  trainhead = new THREE.Mesh(new THREE.CylinderGeometry(7.5,7.5,20,32),new THREE.MeshNormalMaterial({color: 0x888888}));
-  trainhead.position.y = 5;
-  trainhead.position.z = -10;
-  scene.add(train);
-  train.add(trainhead);
-}
+    <div id="info">HW0.js
+        <br>
+        <button id="trainturn" onclick="ButtonEvent()">Press To Stop</button>
+        <br>
+        <p id="turn">shift left</p>
+        <p id="angle"></p>
+        <script>
+            //<p id="angle"></p>
+            var camera, scene, renderer, clock, train;
+            var angle = 0;
+            var stop = 0;
+            //mode 0 = shift left, 1 = left half circle, 2 = shift right, 3 = right half circle, 4 = Stop
+            var mode = 0;
+            var line = 0;
+            var saved_mode = 0;
+            init();
+            animate();
 
-function animate() {
+            function init() {
+                scene = new THREE.Scene();
+                clock = new THREE.Clock();
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x888888);
+                document.body.appendChild(renderer.domElement);
+                camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+                camera.position.set(0, 40, 50);
+                let controls = new THREE.OrbitControls(camera, renderer.domElement);
+                var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+                scene.add(gridXZ);
+                train = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 30), new THREE.MeshNormalMaterial());
+                trainhead = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 20, 32), new THREE.MeshNormalMaterial({
+                    color: 0x888888
+                }));
+                trainhead.position.y = 5;
+                trainhead.position.z = -10;
+                scene.add(train);
+                train.add(trainhead);
+            }
 
-/*calculate
-radius = 50
-upper line = under line = 50*2
-turn length = (50 * 2) * 2 + 2 * pi * radius 
-we must 6 seconds turn a circle
-v = turn length / 6 = 514 / 6 = 85.6
-v in line = 85.6
-omaga in circle = (2 * pi) / (200 / 85.6)
+            function animate() {
 
-*/
-  document.getElementById('angle').textContent = angle;
-  var radius = 50;
-  var dt;
-  length = (50 * 2) * 2 + 2 * Math.PI * radius;
-  var v = length / 6;
-  var circleTime = 6 - (200 / v);
-  var omaga = (2 * Math.PI) / circleTime;
-  if(mode == 0){
-    train.position.set(line,5,-50);
-    train.rotation.y = Math.PI/2;
-    line -= (100 / v);
-    if(line < -50){
-	  clock.start();
-      mode = 1;
-	  angle = 90;
-	  document.getElementById('turn').textContent = 'left half circle';
-    }
-  } 
-  else if(mode == 1){
-	train.position.set(line + radius* Math.cos(angle), 5, -radius* Math.sin(angle));
-    train.rotation.y = angle;
-	dt = clock.getDelta();
-	angle += omaga * dt;
-	if(line + radius* Math.cos(angle) > -50){
-	  clock.stop();
-      mode = 2;
-	  document.getElementById('turn').textContent = 'shift right';
-    }
-  }
-  else if(mode == 2){
-  	train.position.set(line,5,50);
-    train.rotation.y = Math.PI/2*3;
-    line += (100 / v);
-    if(line > 50){
-	  clock.start();
-      mode = 3;
-	  document.getElementById('turn').textContent = 'right half circle';
-    }
-  }
-  else if(mode == 3){
-    train.position.set(line + radius*Math.cos(angle), 5, -radius* Math.sin(angle));
-    train.rotation.y = angle;
-    dt = clock.getDelta();
-	angle += omaga * dt;
-    if(line + radius*Math.cos(angle) < 50){
-	  clock.stop();
-      mode = 0;
-	  angle = 90;
-	  document.getElementById('turn').textContent = 'shift left';
-    }
-  }
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
-}
-function ButtonEvent(){
-    if(stop == 0){
-		stop = 1;
-        saved_mode = mode;
-        mode = 4;
-       	document.getElementById('turn').textContent = 'stop';
-		document.getElementById('trainturn').textContent = 'Press To Go';
-    }
-    else{
-       	stop = 0;
-        mode = saved_mode;
-		if(mode == 0)document.getElementById('turn').textContent = 'shift left';
-		else if(mode == 1)document.getElementById('turn').textContent = 'left half circle';
-		else if(mode == 2)document.getElementById('turn').textContent = 'shift right';
-		else if(mode == 3)document.getElementById('turn').textContent = 'right half circle';
-       	document.getElementById('trainturn').textContent = 'Press To Stop';
-    }
-}
-</script>
-</div>
+                /*calculate
+                radius = 50
+                upper line = under line = 50*2
+                turn length = (50 * 2) * 2 + 2 * pi * radius 
+                we must 6 seconds turn a circle
+                v = turn length / 6 = 514 / 6 = 85.6
+                v in line = 85.6
+                omaga in circle = (2 * pi) / (200 / 85.6)
+
+                */
+                document.getElementById('angle').textContent = angle;
+                var radius = 50;
+                var dt;
+                length = (50 * 2) * 2 + 2 * Math.PI * radius;
+                var v = length / 6;
+                var circleTime = 6 - (200 / v);
+                var omaga = (2 * Math.PI) / circleTime;
+                if (mode == 0) {
+                    train.position.set(line, 5, -50);
+                    train.rotation.y = Math.PI / 2;
+                    line -= (100 / v);
+                    if (line < -50) {
+                        clock.start();
+                        mode = 1;
+                        angle = 90;
+                        document.getElementById('turn').textContent = 'left half circle';
+                    }
+                } else if (mode == 1) {
+                    train.position.set(line + radius * Math.cos(angle), 5, -radius * Math.sin(angle));
+                    train.rotation.y = angle;
+                    dt = clock.getDelta();
+                    angle += omaga * dt;
+                    if (line + radius * Math.cos(angle) > -50) {
+                        clock.stop();
+                        mode = 2;
+                        document.getElementById('turn').textContent = 'shift right';
+                    }
+                } else if (mode == 2) {
+                    train.position.set(line, 5, 50);
+                    train.rotation.y = Math.PI / 2 * 3;
+                    line += (100 / v);
+                    if (line > 50) {
+                        clock.start();
+                        mode = 3;
+                        document.getElementById('turn').textContent = 'right half circle';
+                    }
+                } else if (mode == 3) {
+                    train.position.set(line + radius * Math.cos(angle), 5, -radius * Math.sin(angle));
+                    train.rotation.y = angle;
+                    dt = clock.getDelta();
+                    angle += omaga * dt;
+                    if (line + radius * Math.cos(angle) < 50) {
+                        clock.stop();
+                        mode = 0;
+                        angle = 90;
+                        document.getElementById('turn').textContent = 'shift left';
+                    }
+                }
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+
+            function ButtonEvent() {
+                if (stop == 0) {
+                    stop = 1;
+                    saved_mode = mode;
+                    mode = 4;
+                    document.getElementById('turn').textContent = 'stop';
+                    document.getElementById('trainturn').textContent = 'Press To Go';
+                } else {
+                    stop = 0;
+                    mode = saved_mode;
+                    if (mode == 0) document.getElementById('turn').textContent = 'shift left';
+                    else if (mode == 1) document.getElementById('turn').textContent = 'left half circle';
+                    else if (mode == 2) document.getElementById('turn').textContent = 'shift right';
+                    else if (mode == 3) document.getElementById('turn').textContent = 'right half circle';
+                    document.getElementById('trainturn').textContent = 'Press To Stop';
+                }
+            }
+        </script>
+    </div>
 </body>
+
 </html>
