@@ -60,7 +60,7 @@ var poseW2S1 = {
     lThigh: -Math.PI / 6,
     rThigh: Math.PI / 40 // right leg stays still
 }
-var poseW2S2 = poseStand0; // beginning of walk
+var poseW2S2 = poseStand1; // beginning of walk
 
 var keysW2S = [
     [0, poseW2S0],
@@ -138,6 +138,8 @@ function keyframeW2S(t, T) { // non-periodic
 
     // non-periodic walk-to-stand animation
     let keys = keysW2S;
+
+    //keys[0] = [0, [poseW2S0.lThigh, poseW2S0.rThigh]];
     var s = (t - ts) / T;
 
     for (var i = 1; i < keys.length; i++) {
