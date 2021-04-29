@@ -25,17 +25,12 @@
     </div>
     <div id="info">
         Press/hold <em>space</em> to walk
-        <br>Release to stand
+        <br>Release to stand <br>Also can use click to control motion.
         <br><br>
         <p id='state'>
         </p>
     </div>
-    <div id="info1">
-        Also can use <em>click</em> to control motion.
-        <br>
-        <p id='state1'>
-        </p>
-    </div>
+
     <div>
         </script>
         <script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
@@ -75,7 +70,8 @@
             var ts, state;
             var count = 1;
             // four STATES: Walk, S2W, Stand, W2S
-
+            var keyTempDown = false;
+            var keyTempUp = true;
             //////////////////////////////
             init();
             animate();
@@ -155,15 +151,34 @@
 
                 keyboard.update();
 
-                if (keyboard.down('space')) { // move to walk
-                    walk = true;
-                    ts = clock.getElapsedTime();
-                    state = 'Walk';
+                if (keyboard.down('space') === true) { // move to walk
+                    if (keyTempDown === false) {
+                        walk = true;
+                        ts = clock.getElapsedTime();
+                        state = 'S2W';
+
+                    } else {
+                        walk = true;
+                        ts = clock.getElapsedTime();
+                        state = 'Walk';
+                    }
+                    keyTempDown = keyboard.down('space');
+                    keyTempUp = keyboard.up('space');
                 }
-                if (keyboard.up('space')) { // move to stand
-                    walk = false;
-                    ts = clock.getElapsedTime();
-                    state = 'Stand';
+                if (keyboard.up('space') === true) { // move to stand
+                    if (keyTempUp === false) {
+                        walk = false;
+                        ts = clock.getElapsedTime();
+                        state = 'W2S';
+
+                    } else {
+                        walk = false;
+                        ts = clock.getElapsedTime();
+                        state = 'Stand';
+                    }
+                    keyTempDown = keyboard.down('space');
+                    keyTempUp = keyboard.up('space');
+
                 }
                 /*
                             if (walk)
