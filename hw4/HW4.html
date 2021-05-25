@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        #info {
+            position: absolute;
+            top: 0px;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            color: #d81818
+        }
+        
+        body {
+            overflow: hidden
+        }
+    </style>
+</head>
+
+<body>
+    <div id="info">hw4-group steer with Obstacles(aim picture from https://i.imgur.com/GmthNU8.png)<br>
+
+        <button id="decrease">
+      separation decrease
+    </button>
+        <button id="increase">
+      separation increase
+    </button><br> separation value :
+        <label id="text">800</label><br>
+
+        <button id="on">
+        separation on
+    </button>
+
+        <button id="off">
+        separation off
+      </button>
+
+    </div>
+    <script src="https://threejs.org/build/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="Mesh.js"></script>
+    <script src="Agent.js"></script>
+    <script src="Obstacles.js"></script>
+    <script src="Find.js"></script>
+
+
+    <script>
+        ////////////////////
+        var camera, scene, renderer, clock;
+        var puck;
+
+        var raycaster;
+        var mouse = new THREE.Vector2();
+        var pickables = [];
+        ///////////Group Steer///////////////
+        var agents = [];
+        var separation = 800;
+
+        init();
+        animate();
+
+        //modify separation value
+        $("#increase").click(function() {
+            separation += 100;
+            $('#text').html('<label id="text">' + separation + '</label>');
+        });
+        $("#decrease").click(function() {
+            separation -= 100;
+            $('#text').html('<label id="text">' + separation + '</label>');
+        });
+        $("#on").click(function() {
+            separation = 800;
+            $('#text').html('<label id="text">' + separation + '</label>');
+        });
+        $("#off").click(function() {
+            separation = 0;
+            $('#text').html('<label id="text">' + separation + '</label>');
+        });
+
+        function init() {
+
+            clock = new THREE.Clock();
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.set(0, 150, 200);
+
+            var gridXZ = new THREE.GridHelper(240, 24, 'purple', 'white');
+            scene.add(gridXZ);
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x888888);
+
+            let controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+            document.body.appendChild(renderer.domElement);
+
+            /////////////////////////////////////////////////////////////////////
+
+            plane = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshBasicMaterial({
+                transparent: true,
+                opacity: 0.5,
+                visible: true
+            }));
+            scene.add(plane);
+            plane.material.visible = false
+            plane.rotation.x = -Math.PI / 2;
+            pickables = [plane];
+
+            let loader = new THREE.TextureLoader();
+            loader.crossOrigin = ""
+            let tex = loader.load("https://i.imgur.com/GmthNU8.png");
+            target = new THREE.Mesh(new THREE.CircleGeometry(10, 20), new THREE.MeshBasicMaterial({
+                map: tex,
+                transparent: true
+            }));
+            scene.add(target);
+            target.rotation.x = -Math.PI / 2
+
+            raycaster = new THREE.Raycaster();
+            document.addEventListener('pointerdown', onDocumentMouseDown, false);
+            ////////////////Group Steer/////////////////
+            for (let i = 0; i < 3; i++) {
+                /*let mesh = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 1, 20),
+                new THREE.MeshBasicMaterial({
+                    color: 0xff0000
+                }));*/
+                let mesh = agentMesh();
+                agent = new Agent(new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), mesh);
+                agents.push(agent);
+            }
+            ////////////////////////
+            //let mesh = agentMesh ();
+            //agent = new Agent(new THREE.Vector3(-100 + 200 * Math.random(), 0, -100 + 200 * Math.random()), mesh);
+
+            // add obstacles to the scene
+            scene.obstacles = [];
+            scene.obstacles.push(new Obstacle(new THREE.Vector3(100 * Math.random() - 100, 0, 100 * Math.random() - 100), 10 + 10 * Math.random()));
+            scene.obstacles.push(new Obstacle(new THREE.Vector3(100 * Math.random(), 0, 100 * Math.random() - 100), 10 + 10 * Math.random()));
+            scene.obstacles.push(new Obstacle(new THREE.Vector3(100 * Math.random() - 100, 0, 100 * Math.random()), 10 + 10 * Math.random()));
+            scene.obstacles.push(new Obstacle(new THREE.Vector3(100 * Math.random(), 0, 100 * Math.random()), 10 + 10 * Math.random()));
+
+
+
+
+        }
+
+        function onDocumentMouseDown(event) {
+
+            event.preventDefault();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // find intersections
+            raycaster.setFromCamera(mouse, camera);
+            var intersects = raycaster.intersectObjects(pickables);
+            if (intersects.length > 0) {
+                target.position.copy(intersects[0].point);
+                //target.position.y = 0.25;
+                //agent.setTarget(intersects[0].point.x,intersects[0].point.y,intersects[0].point.z)
+                ///////////Group Steer///////////////
+                agents.forEach(function(agent) {
+                    agent.setTarget(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z)
+                        //target.position.copy(intersects[0].point);
+                })
+            }
+
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            render();
+            ///////////Group Steer///////////////
+            findNbhd(agents);
+
+            agents.forEach(function(agent) {
+                agent.update(0.01)
+            })
+            let dt = clock.getDelta();
+            ////////////////////////
+            //agent.update(dt);
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+
+
+</html>
