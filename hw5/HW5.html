@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        #info {
+            position: absolute;
+            top: 0px;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            color: #ffff00
+        }
+        
+        body {
+            overflow: hidden
+        }
+    </style>
+</head>
+
+<body>
+    <div id="info">HW5
+        <br>Moveable circles represent ant
+        <br>Yellow paths represent trail
+        <br>Red circles represent ant's hole</div>
+    <script src="https://threejs.org/build/three.min.js"></script>
+    <script src="DrawPath.js"></script>
+    <script src="NewAnt.js"></script>
+    <script src="Find.js"></script>
+    <script>
+        // IIFE addition of clamp function
+        (function() {
+            Math.clamp = function(val, min, max) {
+                return Math.min(Math.max(val, min), max);
+            }
+        })();
+
+        class Agent {
+            constructor(pos, mesh) {
+                this.pos = pos.clone();
+                this.vel = new THREE.Vector3();
+                this.force = new THREE.Vector3();
+                this.target = null;
+                this.size = 3;
+                this.mesh = mesh;
+                this.mesh.position.copy(this.pos);
+                scene.add(mesh);
+                this.MAXSPEED = 5;
+                this.MINSPEED = 2;
+                this.ARRIVAL_R = 30;
+
+                this.nbhd = [];
+                // for orientable agent
+                this.angle = 0;
+            }
+
+            update(dt) {
+                this.accumulateForceL1(-50, 0, -20, 15);
+                this.accumulateForceL1(-20, 15, 20, -15);
+                this.accumulateForceL1(20, -15, 50, 0);
+
+                this.vel.add(this.force.clone().multiplyScalar(dt));
+
+                // ARRIVAL: velocity modulation
+                if (this.target) {
+                    let diff = this.target.clone().sub(this.pos)
+                    let dst = diff.length();
+                    if (dst < this.ARRIVAL_R) {
+                        this.vel.setLength(dst)
+                    }
+                }
+                // MAXSPEED modulation
+                let speed = this.vel.length()
+                this.vel.setLength(Math.clamp(speed, this.MINSPEED, this.MAXSPEED))
+                this.pos.add(this.vel.clone().multiplyScalar(dt))
+                this.mesh.position.copy(this.pos)
+                    // for orientable agent
+                if (this.vel.length() > 1) {
+                    this.angle = Math.atan2(this.vel.y, this.vel.x)
+                    this.mesh.rotation.z = this.angle;
+                }
+            }
+            setTarget(x, y, z) {
+                if (this.target)
+                    this.target.set(x, y, z);
+                else
+                    this.target = new THREE.Vector3(x, y, z);
+            }
+            targetInducedForce(targetPos, mode = 0) { // seek
+                let speed;
+                if (mode === 0)
+                    speed = this.MAXSPEED;
+                else if (mode === 1)
+                    speed = this.vel.length();
+
+                return targetPos.clone().sub(this.pos).normalize().multiplyScalar(speed).sub(this.vel)
+            }
+
+            accumulateForceL1(sx, sy, ex, ey) {
+                if (this.pos.x >= sx && 　this.pos.x <= 　ex) {
+                    this.force.set(0, 0, 0);
+                    if (this.target)
+                        this.force.add(this.targetInducedForce(this.target));
+
+                    let pS = new THREE.Vector3(sx, sy, 0); //Path Start
+                    let pE = new THREE.Vector3(ex, ey, 0); //Path end
+                    let pHat = pE.clone().sub(pS).normalize(); //Path direction
+                    let posF = this.pos.clone().add(this.vel); // position of agent(t+1)
+                    //comput proj
+                    let tmp = posF.clone().sub(pS);
+                    let proj = pHat.multiplyScalar(tmp.dot(pHat)).add(pS); // projection of agent(t+1) on path
+                    let distance = posF.distanceTo(proj); //distance with line
+                    if (distance > radius) { //check collision
+                        let correction = this.targetInducedForce(proj, 1); //
+                        this.force.add(correction);
+                    }
+
+                    // separation  push
+                    let push = new THREE.Vector3();
+                    for (let i = 0; i < this.nbhd.length; i++) {
+                        let point = this.pos.clone().sub(this.nbhd[i].pos);
+                        push.add(point.setLength(0.5 / point.length()));
+                    }
+                    this.force.add(push);
+                }
+                /*
+                // path related (for simple straight line)
+                let posF = agent.pos.clone().add (agent.vel);
+                let proj = new THREE.Vector3(posF.x, 0, 0);
+                //console.log (proj);
+                if (posF.y > radius || posF.y < -radius) {
+                  let correction = this.targetInducedForce(proj, 1);
+                this.force.add (correction);
+                }
+                */
+            }
+            distanceTo(otherAgent) {
+                return this.pos.distanceTo(otherAgent.pos)
+            }
+            addNbr(otherAgent) {
+                this.nbhd.push(otherAgent)
+            }
+        }
+
+        var camera, scene, renderer;
+        var agents = [];
+        var radius;
+
+        init();
+        animate();
+
+        function init() {
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x888888);
+            document.body.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            camera = new THREE.OrthographicCamera(-50, 50, 50, -50, -10, 100);
+            camera.position.z = 10;
+
+            let grid = new THREE.GridHelper(100, 10, 'blue', 'white');
+            grid.rotation.x = -Math.PI / 2;
+            scene.add(grid);
+
+            /////////////////////////////////////////////////////////
+
+            newAnt();
+            /*let mesh = new THREE.Mesh (new THREE.CircleGeometry(1,20), new THREE.MeshBasicMaterial({color:'cyan'}));
+            //scene.add (circle);
+            let pos = new THREE.Vector3(4,4,0);
+            agent = new Agent (pos, mesh);
+            agent.vel.set (2,-2,0);*/
+
+            //////////////////////////////////////
+            radius = 4;
+            drawPath(-50, 0, -20, 15, radius);
+            drawPath(-20, 15, 20, -15, radius);
+            drawPath(20, -15, 50, 0, radius);
+            /*let path = new THREE.Mesh (new THREE.PlaneGeometry(100,radius*2), new THREE.MeshBasicMaterial({color:'yellow', transparent:true, opacity:0.2}));
+            scene.add (path); */
+        }
+
+
+        function animate() {
+            requestAnimationFrame(animate);
+            render();
+
+            let dt = 0.1;
+
+            findNbhd(agents);
+            agents.forEach(function(agent) {
+                agent.update(dt);
+                if (agent.pos.x > 50)
+                    agent.pos.x = -50;
+            });
+
+            //agent.update(dt);
+            // portal
+            //if (agent.pos.x > 50) agent.pos.x = -50;
+
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+
+</html>
