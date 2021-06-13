@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <style>
+        #info {
+            position: absolute;
+            top: 0px;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            color: #b90358
+        }
+        
+        body {
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="info">BSP tree implement
+        <br>Green represent that now circle can move any direction by keyboard.
+        <br>Red represent that now circle only can move away wall by keyboard.
+    </div>
+    <script src="https://threejs.org/build/three.min.js"></script>
+    <script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+    <script src="Point.js"></script>
+    <script src="BSPNode.js"></script>
+    <script src="Loop.js"></script>
+    <script src="BuildTree.js"></script>
+    <script src="InOutTest.js"></script>
+    <script>
+        var camera, scene, renderer;
+        var keyboard;
+        var RR;
+        var state = 0;
+        var temp;
+
+        init();
+        animate();
+
+        function init() {
+
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x888888);
+            document.body.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            camera = new THREE.OrthographicCamera(-1.5, 9, 9, -1.5, -10, 100);
+            camera.position.z = 10;
+
+            let grid = new THREE.GridHelper(18, 18, 'black', 'white');
+            grid.rotation.x = -Math.PI / 2;
+            scene.add(grid);
+
+            keyboard = new KeyboardState();
+
+            /////////////////////////////////////////////////////////
+
+            tree = buildTree();
+
+
+            RR = 0.2;
+            pawn = new THREE.Mesh(new THREE.CircleGeometry(RR, 20),
+                new THREE.MeshBasicMaterial({
+                    color: 'green'
+                }));
+            scene.add(pawn);
+
+            pawn.position.set(4, 4);
+
+        }
+
+        function animate() {
+            keyboard.update();
+
+            if (keyboard.down('up')) {
+                pawn.position.y += 0.1;
+                state = inOut(pawn.position.x, pawn.position.y, tree, RR);
+                if (temp === 1 && state === 1)
+                    pawn.position.y -= 0.1;
+                temp = state;
+            }
+            if (keyboard.down('down')) {
+                pawn.position.y -= 0.1;
+                state = inOut(pawn.position.x, pawn.position.y, tree, RR);
+                if (temp === 1 && state === 1)
+                    pawn.position.y += 0.1;
+                temp = state;
+            }
+
+            if (keyboard.down('left')) {
+                pawn.position.x -= 0.1;
+                state = inOut(pawn.position.x, pawn.position.y, tree, RR);
+                if (temp === 1 && state === 1)
+                    pawn.position.x += 0.1;
+                temp = state;
+            }
+            if (keyboard.down('right')) {
+                pawn.position.x += 0.1;
+                state = inOut(pawn.position.x, pawn.position.y, tree, RR);
+                if (temp === 1 && state === 1)
+                    pawn.position.x -= 0.1;
+                temp = state;
+            }
+
+            if (state === 1) { // solid
+                pawn.material.color = new THREE.Color('red');
+            } else {
+                pawn.material.color = new THREE.Color('green');
+            }
+
+            requestAnimationFrame(animate);
+            render();
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+
+</html>
